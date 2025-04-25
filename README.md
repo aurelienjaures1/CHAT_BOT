@@ -1,11 +1,23 @@
-title: My Chat Bot
-emoji: 👀
-colorFrom: pink
-colorTo: purple
-sdk: streamlit
-sdk_version: 1.44.1
-app_file: app.py
+---
+title: "CHAT BOT 🧠💬"
+emoji: "🤖"
+colorFrom: "purple"
+colorTo: "blue"
+sdk: "streamlit"
+sdk_version: "1.35.0"
+app_file: "app.py"
 pinned: false
-license: mit
+---
 
-Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
+# CHAT BOT - IA Conversationnelle ✨
+
+Bienvenue dans mon projet de **Chatbot IA** développé avec **Streamlit**, **LangChain**, **OpenAI** et **Supabase** ! 🚀
+
+**Fonctionnalités principales :**
+- ✍️ Posez une question librement.
+- 🤖 Le chatbot génère des réponses précises et élégantes.
+- 📚 Les sources des documents sont citées automatiquement.
+- 🌟 Interface fluide et design professionnel.
+
+---
+> Déployé sur [Hugging Face Spaces](https://huggingface.co/spaces) avec ❤️.
