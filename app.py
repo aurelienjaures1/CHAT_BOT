@@ -1,50 +1,52 @@
 import streamlit as st
-from dotenv import load_dotenv
 import os
-
+from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.vectorstores import SupabaseVectorStore
 from langchain.chains import RetrievalQA
 from supabase import create_client
 
-# ========== 🎨 Style Pro ========== #
-st.set_page_config(page_title="CHAT BOT", page_icon="🤖")
+# ========== CONFIGURATION ==========
 
+st.set_page_config(
+    page_title="CHAT BOT 📚🧠",
+    page_icon="🤖",
+    layout="centered"
+)
+
+# 🎨 Custom CSS
 st.markdown("""
     <style>
-    body {
-        background-color: #f0f2f6;
-    }
-    .stTextInput > div > div > input {
-        font-size: 18px;
-        padding: 12px;
-        border: 2px solid #4CAF50;
-        border-radius: 10px;
-    }
-    .stButton > button {
-        background-color: #4CAF50;
-        color: white;
-        font-size: 18px;
-        padding: 10px 24px;
-        border: none;
-        border-radius: 8px;
-    }
-    .stMarkdown {
-        font-size: 18px;
-    }
+        body {
+            background-color: #f7f9fc;
+        }
+        .stTextInput input {
+            font-size: 18px;
+            padding: 0.5rem;
+        }
+        .stButton button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            font-size: 18px;
+        }
+        .stMarkdown {
+            font-size: 18px;
+        }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("# 🤖 CHAT BOT")
-st.markdown("### 🔍 Posez toutes vos questions à vos documents PDF directement ici 📚")
+st.title("🤖 CHAT BOT - Posez vos questions à vos PDF 📚")
+st.write("Utilise la puissance de l'IA pour explorer vos documents !")
 
-# ========== 🔐 Configuration API ========== #
+# ========== CHARGEMENT DES CLES .ENV ==========
 load_dotenv()
 openai_key = os.getenv("OPENAI_API_KEY")
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
 
-# ========== ⚡ Initialisation Backend ========== #
+# ========== INITIALISATION ==========
 client = create_client(supabase_url, supabase_key)
 embedding = OpenAIEmbeddings(openai_api_key=openai_key)
 
@@ -55,11 +57,12 @@ vectorstore = SupabaseVectorStore(
 )
 
 retriever = vectorstore.as_retriever()
+
 llm = ChatOpenAI(
     openai_api_key=openai_key,
-    temperature=0,
     model_name="gpt-3.5-turbo",
-    max_tokens=1024
+    temperature=0,
+    max_tokens=1500  # 🔥 Plus de détails dans les réponses
 )
 
 qa_chain = RetrievalQA.from_chain_type(
@@ -68,19 +71,25 @@ qa_chain = RetrievalQA.from_chain_type(
     return_source_documents=True
 )
 
-# ========== 🖋 Interface utilisateur ========== #
-question = st.text_input("📝 Votre question :", "")
+# ========== INTERFACE UTILISATEUR ==========
+question = st.text_input("✍️ Entrez votre question ici :", placeholder="Exemple : Quels sont les symptômes du SAOS ?")
 
-if question:
-    with st.spinner('✏️ Génération de la réponse...'):
-        result = qa_chain({"query": question})
+if st.button("🔍 Lancer la recherche"):
+    if question:
+        try:
+            result = qa_chain({"query": question})
+            st.markdown("## 🧠 Réponse de l'IA :")
+            st.success(result["result"])
 
-    st.markdown("### 🧠 Réponse :")
-    st.success(result["result"])
+            # 📚 Sources
+            if result.get("source_documents"):
+                st.markdown("## 📖 Sources utilisées :")
+                for doc in result["source_documents"]:
+                    page = doc.metadata.get('page', '?')
+                    source = doc.metadata.get('source', 'Document inconnu')
+                    st.markdown(f"- **Page {page}** : {source}")
 
-    # Affichage des sources
-    if result.get("source_documents"):
-        st.markdown("### 📚 Sources :")
-        for doc in result["source_documents"]:
-            source = f"Page {doc.metadata.get('page', '?')} - {doc.metadata.get('source', 'Inconnue')}"
-            st.markdown(f"- {source}")
+        except Exception as e:
+            st.error(f"❌ Une erreur est survenue : {e}")
+    else:
+        st.warning("⚠️ Veuillez entrer une question avant de lancer la recherche.")
