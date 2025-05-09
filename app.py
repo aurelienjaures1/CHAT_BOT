@@ -90,4 +90,64 @@ def display_chat_history():
             f"<div class='chat-message assistant'><b>Assistant :</b> {answer}</div>",
             unsafe_allow_html=True
         )
+
         if sources:
+            with st.expander(f"📚 Sources utilisées (Question {i+1})"):
+                for j, doc in enumerate(sources[:5]):
+                    page = doc.metadata.get("page", "?")
+                    source = doc.metadata.get("source", "Document inconnu")
+                    st.markdown(
+                        f"<div class='source-document'><b>Page {page} :</b> {source}</div>",
+                        unsafe_allow_html=True
+                    )
+
+# ========== TRAITEMENT QUESTION ==========
+def process_question(question):
+    try:
+        with st.spinner("🔍 Recherche en cours..."):
+            result = st.session_state.qa_chain({"query": question})
+            answer = result["result"]
+            sources = result.get("source_documents", [])
+            st.session_state.chat_history.append((question, answer, sources))
+            return True
+    except Exception as e:
+        st.error(f"❌ Erreur pendant le traitement : {e}")
+        return False
+
+# ========== INTERFACE UTILISATEUR ==========
+display_chat_history()
+
+question = st.text_input(
+    "✍️ Posez votre question ici :",
+    placeholder="Exemple : Quels sont les symptômes du SAOS ?"
+)
+
+col1, col2, col3 = st.columns([3, 1, 2])
+with col1:
+    send_pressed = st.button("🔍 Envoyer")
+with col2:
+    clear_pressed = st.button("🧹 Effacer")
+with col3:
+    test_pressed = st.button("💡 Tester l'historique manuel")
+
+if send_pressed and question:
+    success = process_question(question)
+    if success:
+        st.rerun()
+
+if clear_pressed:
+    st.session_state.chat_history = []
+    st.rerun()
+
+if test_pressed:
+    st.session_state.chat_history.append((
+        "Quelle est la capitale de la France ?",
+        "La capitale de la France est Paris.",
+        []
+    ))
+    st.rerun()
+
+# ========== PIED DE PAGE ==========
+st.markdown("---")
+st.markdown("📝 *Ce chatbot utilise l'IA pour répondre à vos questions basées sur vos documents PDF via un système RAG.*")
+
