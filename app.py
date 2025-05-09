@@ -3,17 +3,17 @@ import os
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.vectorstores import SupabaseVectorStore
 from langchain.chains import RetrievalQA
+from langchain.prompts import PromptTemplate
 from supabase import create_client
-import time
 
 # ========== CONFIGURATION ==========
+
 st.set_page_config(
     page_title="CHAT BOT RAG",
     page_icon="🤖",
     layout="centered"
 )
 
-# 🎨 CSS custom
 st.markdown("""
     <style>
         .chat-message {
@@ -28,6 +28,7 @@ st.markdown("""
             border-left: 3px solid #4CAF50;
             padding-left: 10px;
             margin-bottom: 10px;
+            background-color: #f9f9f9;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -47,30 +48,54 @@ openai_key = st.secrets["OPENAI_API_KEY"]
 supabase_url = st.secrets["SUPABASE_URL"]
 supabase_key = st.secrets["SUPABASE_SERVICE_KEY"]
 
-# ========== INITIALISATION DES COMPOSANTS ==========
+# ========== INITIALISATION ==========
+
 def initialize_rag_components():
     try:
         client = create_client(supabase_url, supabase_key)
         embedding = OpenAIEmbeddings(openai_api_key=openai_key)
+
         vectorstore = SupabaseVectorStore(
             client=client,
             embedding=embedding,
             table_name="documents",
         )
-        retriever = vectorstore.as_retriever()
+
+        retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+
+        prompt = PromptTemplate(
+            input_variables=["context", "question"],
+            template="""
+Tu es un assistant expert. En te basant uniquement sur le CONTEXTE ci-dessous, réponds à la QUESTION. 
+Si tu ne sais pas, réponds simplement "Je ne sais pas".
+
+CONTEXTE:
+{context}
+
+QUESTION:
+{question}
+
+Réponse :
+"""
+        )
+
         llm = ChatOpenAI(
             openai_api_key=openai_key,
             model_name="gpt-3.5-turbo",
             temperature=0,
             max_tokens=1500
         )
+
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
             retriever=retriever,
-            return_source_documents=True
+            return_source_documents=True,
+            chain_type_kwargs={"prompt": prompt}
         )
+
         st.session_state.qa_chain = qa_chain
         st.session_state.is_initialized = True
+
     except Exception as e:
         st.error(f"❌ Erreur d'initialisation : {e}")
         st.stop()
@@ -90,64 +115,23 @@ def display_chat_history():
             f"<div class='chat-message assistant'><b>Assistant :</b> {answer}</div>",
             unsafe_allow_html=True
         )
+        for j, doc in enumerate(sources):
+            meta = doc.metadata
+            st.markdown(f"""
+                <div class='source-document'>
+                <b>Source {j+1} - page {meta.get("page", "?")} :</b><br>
+                <pre>{doc.page_content}</pre>
+                </div>
+            """, unsafe_allow_html=True)
 
-        if sources:
-            with st.expander(f"📚 Sources utilisées (Question {i+1})"):
-                for j, doc in enumerate(sources[:5]):
-                    page = doc.metadata.get("page", "?")
-                    source = doc.metadata.get("source", "Document inconnu")
-                    st.markdown(
-                        f"<div class='source-document'><b>Page {page} :</b> {source}</div>",
-                        unsafe_allow_html=True
-                    )
+# ========== INTERACTION ==========
+user_input = st.text_input("❓ Posez votre question ici :")
 
-# ========== TRAITEMENT QUESTION ==========
-def process_question(question):
-    try:
-        with st.spinner("🔍 Recherche en cours..."):
-            result = st.session_state.qa_chain({"query": question})
-            answer = result["result"]
-            sources = result.get("source_documents", [])
-            st.session_state.chat_history.append((question, answer, sources))
-            return True
-    except Exception as e:
-        st.error(f"❌ Erreur pendant le traitement : {e}")
-        return False
+if user_input:
+    with st.spinner("Recherche de la réponse..."):
+        response = st.session_state.qa_chain.invoke({"query": user_input})
+        answer = response["result"]
+        sources = response["source_documents"]
 
-# ========== INTERFACE UTILISATEUR ==========
-display_chat_history()
-
-question = st.text_input(
-    "✍️ Posez votre question ici :",
-    placeholder="Exemple : Quels sont les symptômes du SAOS ?"
-)
-
-col1, col2, col3 = st.columns([3, 1, 2])
-with col1:
-    send_pressed = st.button("🔍 Envoyer")
-with col2:
-    clear_pressed = st.button("🧹 Effacer")
-with col3:
-    test_pressed = st.button("💡 Tester l'historique manuel")
-
-if send_pressed and question:
-    success = process_question(question)
-    if success:
-        st.rerun()
-
-if clear_pressed:
-    st.session_state.chat_history = []
-    st.rerun()
-
-if test_pressed:
-    st.session_state.chat_history.append((
-        "Quelle est la capitale de la France ?",
-        "La capitale de la France est Paris.",
-        []
-    ))
-    st.rerun()
-
-# ========== PIED DE PAGE ==========
-st.markdown("---")
-st.markdown("📝 *Ce chatbot utilise l'IA pour répondre à vos questions basées sur vos documents PDF via un système RAG.*")
-
+        st.session_state.chat_history.append((user_input, answer, sources))
+        display_chat_history()
