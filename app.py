@@ -8,7 +8,7 @@ import time
 
 # ========== CONFIGURATION ==========
 st.set_page_config(
-    page_title="CHAT BOT 📚🧠",
+    page_title="CHAT BOT RAG",
     page_icon="🤖",
     layout="centered"
 )
@@ -32,7 +32,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🤖 CHAT BOT - Posez vos questions à vos PDF 📚")
+st.title("🤖 CHAT BOT - Posez vos questions")
 st.write("Utilise la puissance de l'IA pour explorer vos documents !")
 
 # ========== SESSION STATE ==========
@@ -82,57 +82,5 @@ if not st.session_state.is_initialized:
 # ========== AFFICHAGE HISTORIQUE ==========
 def display_chat_history():
     for i, (question, answer, sources) in enumerate(st.session_state.chat_history):
-        st.markdown(f"<div class='chat-message user'><b>Vous :</b> {question}</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='chat-message assistant'><b>Assistant :</b> {answer}</div>", unsafe_allow_html=True)
-        if sources:
-            with st.expander(f"📚 Sources utilisées (Question {i+1})"):
-                for j, doc in enumerate(sources[:5]):
-                    page = doc.metadata.get("page", "?")
-                    source = doc.metadata.get("source", "Document inconnu")
-                    st.markdown(f"<div class='source-document'><b>Page {page} :</b> {source}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='chat-message user'><b>Vous :</b> {question}</div>", unsafe_allow_
 
-display_chat_history()
-
-# ========== TRAITEMENT QUESTION ==========
-def process_question(question):
-    try:
-        with st.spinner("🔍 Recherche en cours..."):
-            time.sleep(0.3)
-            result = st.session_state.qa_chain({"query": question})
-            answer = result["result"]
-            sources = result.get("source_documents", [])
-            st.session_state.chat_history.append((question, answer, sources))
-    except Exception as e:
-        st.error(f"❌ Erreur : {e}")
-
-# ========== INTERFACE UTILISATEUR ==========
-question = st.text_input(
-    "✍️ Posez votre question ici :", 
-    placeholder="Exemple : Quels sont les symptômes du SAOS ?"
-)
-
-col1, col2 = st.columns([4, 1])
-with col1:
-    send_pressed = st.button("🔍 Envoyer")
-with col2:
-    clear_pressed = st.button("🧹 Effacer")
-
-if send_pressed and question:
-    process_question(question)
-
-if clear_pressed:
-    st.session_state.chat_history = []
-    st.experimental_rerun()
-
-# ➕ TEST MANUEL
-if st.button("💡 Tester l’historique manuel"):
-    st.session_state.chat_history.append((
-        "Quelle est la capitale de la France ?",
-        "La capitale est Paris.",
-        []
-    ))
-    st.experimental_rerun()
-
-# ========== PIED DE PAGE ==========
-st.markdown("---")
-st.markdown("📝 *Ce chatbot utilise l'IA pour répondre à vos questions basées sur vos documents PDF.*")
