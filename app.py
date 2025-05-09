@@ -91,6 +91,3 @@ def display_chat_history():
             unsafe_allow_html=True
         )
         if sources:
-            with st.expander(f"📚 Sources utilisées (Question {i+1})"):
-                for j, doc in enumerate(sources[:5]):
-                    page =
