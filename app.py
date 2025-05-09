@@ -82,5 +82,6 @@ if not st.session_state.is_initialized:
 # ========== AFFICHAGE HISTORIQUE ==========
 def display_chat_history():
     for i, (question, answer, sources) in enumerate(st.session_state.chat_history):
-        st.markdown(f"<div class='chat-message user'><b>Vous :</b> {question}</div>", unsafe_allow_
+       st.markdown(f"<div class='chat-message user'><b>Vous :</b> {question}</div>", unsafe_allow_html=True)
+
 
